@@ -8,6 +8,7 @@ extends Node3D
 ##   --time=SECONDS                                   jump into the phase
 ##   --weather=lull|gust|calm|storm                   hold the weather
 ##   --quality=low|medium|high                        override the saved quality
+##   --lang=da|en                                     override the saved voice language
 ##   --fast                                           run the clock 8x
 ##   --demo-subs                                      put a line and a caption on screen
 ##   --bench=SECONDS                                  print the frame rate, then quit
@@ -91,6 +92,9 @@ func _ready() -> void:
 	voice.main = self
 	voice.subtitles = hud.subtitles
 	add_child(voice)
+	if args.get("lang", "") in ["da", "en"]:
+		hud.language = args["lang"]
+	voice.language = hud.language
 
 	fire = FireScript.new()
 	fire.main = self

@@ -22,8 +22,9 @@ Version 2 keeps every mechanic of version 1 and changes how it looks, sounds and
 - **Subtitles.** Native-resolution serif text on a soft band, styled by kind: Eske's speech,
   other voices with a cue, bracketed sound captions that stack above speech, and the carved line
   centered in parchment. Timed to the voice clip, or to reading speed when there is none.
-- **Voice-over for Eske**, with placeholder lines made by `tools/make_vo.py` and a script for
-  recording real ones in `VO_SCRIPT.md`.
+- **Voice-over for Eske**, in Danish or English (Danish unless you change it in the settings),
+  with English subtitles either way. Placeholder lines are made by `tools/make_vo.py`, and
+  `VO_SCRIPT.md` is the script for recording real ones.
 
 ## Running it
 
@@ -46,7 +47,7 @@ The first start imports the sounds, which takes a few seconds.
 | Space | Hold your breath (in the dream) |
 | B | Blow out or light the candle (in the tent; blowing it out at night is how you sleep) |
 | Q | Crawl out of the tent |
-| Esc | Settings: subtitles on or off, three sizes, background strength, quality |
+| Esc | Settings: voice in Danish or English, subtitles on or off, three sizes, background strength, quality |
 | R | Begin again, on the closing card |
 
 ## Settings and performance
@@ -91,15 +92,17 @@ Options go after a lone `--`:
 | `--time=SECONDS` | Jump into the phase (the dream, the day's lull at 100 to 140, dusk's at 5 to 30) |
 | `--weather=lull\|gust\|calm\|storm` | Hold the weather |
 | `--quality=low\|medium\|high` | Override the saved quality |
+| `--lang=da\|en` | Override the saved voice language |
 | `--fast` | Run the clock 8x |
 | `--demo-subs` | Put a spoken line and a sound caption on screen |
 | `--bench=SECONDS` | Print the frame rate, then quit |
 | `--selftest` | Play through every mechanic and print PASS or FAIL for each |
 
 The self-test checks every mechanic from version 1 and the new systems: every voiced line has a
-clip and a colder take, `need_firewood` plays when the fire is low and its subtitle lasts as long
-as the clip, the line is cut off or dropped once the fire is fed, story lines interrupt idle ones,
-variants rotate, captions stack above speech, long lines break where the sentence breaks, prompts
+clip and a colder take in both languages, `need_firewood` plays when the fire is low and its
+subtitle lasts as long as the clip, Danish takes play under English subtitles and switching to
+English switches the takes, the line is cut off or dropped once the fire is fed, story lines
+interrupt idle ones, variants rotate, captions stack above speech, long lines break where the sentence breaks, prompts
 never overlap subtitles, the wind drives the gusts, the loudness and the snow, a lull reveals the
 mountains, and the voice is dry inside the tent and muffled when frozen.
 
@@ -133,15 +136,18 @@ moment, and the game leaves the mouse alone while recording):
 | `scripts/selftest.gd` | The self-test |
 | `data/lines.json` | Every line of text: id, kind, priority, cooldown, trigger, delivery note, variants and files |
 | `shaders/` | Terrain, sea, sky, mountains, the blizzard volume, snow, flames, smoke, embers, rock, wood, cloth, skin, vignette and grain, frost |
-| `tools/make_vo.py` | Makes every placeholder voice line and writes `VO_SCRIPT.md` |
+| `tools/make_vo.py` | Makes every placeholder voice line in Danish and English, and writes `VO_SCRIPT.md` |
 | `tools/make_sfx.py`, `music/make_song.py` | The sounds and music, unchanged from version 1 |
 
 ## Open questions
 
-- **English or Danish.** Eske speaks English, as asked. Whether he should speak Danish with
-  English subtitles is still open in the design.
+- **The Danish lines** are plain modern Danish translated from the English, not yet checked by a
+  native speaker. Whether Eske's Danish should sound older is open.
 - **The placeholder voice** is a macOS system voice, pitched down and roughened. It is there for
-  timing and placement, not performance. See `VO_SCRIPT.md` for recording the real lines.
+  timing and placement, not performance. The only Danish voice on most Macs is Sara, a woman's
+  voice set down to a man's pitch. If you install Magnus (System Settings > Accessibility > Spoken
+  Content > System Voice > Manage Voices), `python3 tools/make_vo.py --lang da` remakes the Danish
+  lines with him. See `VO_SCRIPT.md` for recording the real lines.
 
 ## Not in yet
 

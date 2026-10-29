@@ -5,7 +5,8 @@ extends Node
 ##   - a line whose reason has passed is dropped ("I need firewood" once the fire is fed)
 ##   - each line has a cooldown, and the same words never come again within a few minutes
 ## Eske speaks on his own bus: a little open-air reverb outside, dry and close in the tent, and
-## more muffled and breathy the colder he gets.
+## more muffled and breathy the colder he gets. He and the men speak Danish (vo/da/) or English
+## (vo/), as set in the settings; the subtitles show the English line either way.
 
 signal line_started(id: String)
 
@@ -24,6 +25,7 @@ var dropped: Array = []  # ids dropped because their reason passed
 var current := {}
 var cold := 0.0
 var indoors := false
+var language := "da"  # "da" or "en"
 
 var _queue: Array = []
 var _auto: Array = []
@@ -80,8 +82,10 @@ func _stream(path: String) -> AudioStream:
 	return _streams[path]
 
 
-func clip(file: String) -> AudioStream:
-	return _stream("res://vo/%s" % file)
+## The recording of a line in `lang` (the chosen language if empty), or its colder take.
+func clip(file: String, cold_take := false, lang := "") -> AudioStream:
+	var dir := "res://vo/" if (lang if lang != "" else language) == "en" else "res://vo/da/"
+	return _stream(dir + ("cold/" if cold_take else "") + file)
 
 
 # --- Asking for lines ------------------------------------------------------------------
@@ -230,7 +234,7 @@ func _start(req: Dictionary) -> void:
 			_player.stream = stream
 			_player.volume_db = 0.0
 			_player.play()
-			var cold_stream := _stream("res://vo/cold/%s" % v["file"])
+			var cold_stream := clip(v["file"], true)
 			if cold_stream != null:
 				_player_cold.stream = cold_stream
 				_player_cold.play()

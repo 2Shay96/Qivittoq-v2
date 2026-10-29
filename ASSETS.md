@@ -24,19 +24,29 @@ no font file is bundled. To bundle an open-licensed font instead, save it as
 
 Every line of text is in `data/lines.json`.
 
-## Voice (`vo/`)
+## Voice (`vo/` and `vo/da/`)
 
-44 placeholder clips, 152 seconds in all: 37 of Eske's lines and variants, each with a colder take
-in `vo/cold/`, and 7 calls from the men in the dream. 16-bit mono 44.1 kHz WAV.
+Placeholder clips in two languages, chosen in the settings: Danish in `vo/da/` (44 clips, 151
+seconds) and English in `vo/` (44 clips, 152 seconds). Each has 37 of Eske's lines and variants,
+each with a colder take in `cold/`, and 7 calls from the men in the dream. 16-bit mono 44.1 kHz WAV.
 
-- **Eske:** macOS voice "Daniel (English (UK))" at 135 words a minute, slowed and lowered about two
-  semitones, with hoarse breath mixed under the words, an audible breath before and after, EQ, and
-  a little grit. The cold take is breathier, muffled and shivers.
-- **The men in the dream:** macOS voices Reed, Rocko, Ralph and Grandpa, thinned, pushed far out
-  over the water with echoes off the shore and a long tail. They replace v1's synthesized
-  `audio/call_eske_*.wav`, which are still in `audio/` but no longer used.
-- **Regenerate:** `python3 tools/make_vo.py` (macOS only; it needs `say` and `afconvert`).
-- **Replace:** see `VO_SCRIPT.md`. A real recording saved over a file in `vo/` is used as it is.
+- **Eske in Danish:** macOS voice "Sara", a woman's voice, set down to a man's pitch (about
+  110 Hz) with `say`'s `[[pbas 38]]` command and slowed 8%. If the Danish man's voice "Magnus" is
+  installed, `make_vo.py` uses him instead.
+- **Eske in English:** macOS voice "Daniel (English (UK))" at 135 words a minute, slowed and
+  lowered about two semitones.
+- **Both:** hoarse breath mixed under the words, an audible breath before and after, EQ, and a
+  little grit. The cold take is breathier, muffled and shivers.
+- **The men in the dream:** in Danish, Sara at five different pitches; in English, macOS voices
+  Reed, Rocko, Ralph and Grandpa. Thinned, pushed far out over the water with echoes off the shore
+  and a long tail. They replace v1's synthesized `audio/call_eske_*.wav`, which are still in
+  `audio/` but no longer used.
+- **The Danish words** are plain modern Danish translated from the English lines, not yet checked
+  by a native speaker.
+- **Regenerate:** `python3 tools/make_vo.py` for both languages, or `--lang da` for one (macOS
+  only; it needs `say` and `afconvert`).
+- **Replace:** see `VO_SCRIPT.md`. A real recording saved over a file in `vo/da/` or `vo/` is used
+  as it is.
 - **License caution:** these clips are made with Apple's system voices. Apple's macOS license
   limits what the voices may be used for, and may not allow sharing their recordings publicly or
   commercially. Treat them as stand-ins for this machine, and replace them with recorded or
@@ -80,7 +90,7 @@ to 1.45 for gusts) on its own bus, which is muffled inside the tent.
 
 ## Regenerating
 
-- Voice: `python3 tools/make_vo.py` (writes `vo/`, `vo/cold/` and `VO_SCRIPT.md`)
+- Voice: `python3 tools/make_vo.py` (writes `vo/da/`, `vo/`, their `cold/` folders and `VO_SCRIPT.md`)
 - Sounds: `python3 tools/make_sfx.py` (writes into `audio/`; seeded, so the result is the same each time)
 - Music: `python3 music/make_song.py` (writes next to itself)
 

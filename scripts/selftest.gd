@@ -20,21 +20,23 @@ func run() -> void:
 	_check(main.phase == "day" and p.mode == "walk", "starts outside in daylight")
 
 	# --- Voice-over -----------------------------------------------------------------------
-	var missing := []
-	var missing_cold := []
-	var voiced := 0
-	for id in voice.lines:
-		var line: Dictionary = voice.lines[id]
-		if line["kind"] != "speech" and line["kind"] != "voice":
-			continue
-		for v in line["variants"]:
-			voiced += 1
-			if voice.clip(v["file"]) == null:
-				missing.append(v["file"])
-			if line["kind"] == "speech" and voice._stream("res://vo/cold/" + v["file"]) == null:
-				missing_cold.append(v["file"])
-	_check(missing.is_empty(), "every voiced line has its clip (%d clips, missing %s)" % [voiced, missing])
-	_check(missing_cold.is_empty(), "every line of Eske's has a colder take (missing %s)" % [missing_cold])
+	voice.language = "da"
+	for lang in ["da", "en"]:
+		var missing := []
+		var missing_cold := []
+		var voiced := 0
+		for id in voice.lines:
+			var line: Dictionary = voice.lines[id]
+			if line["kind"] != "speech" and line["kind"] != "voice":
+				continue
+			for v in line["variants"]:
+				voiced += 1
+				if voice.clip(v["file"], false, lang) == null:
+					missing.append(v["file"])
+				if line["kind"] == "speech" and voice.clip(v["file"], true, lang) == null:
+					missing_cold.append(v["file"])
+		_check(missing.is_empty(), "%s: every voiced line has its clip (%d clips, missing %s)" % [lang, voiced, missing])
+		_check(missing_cold.is_empty(), "%s: every line of Eske's has a colder take (missing %s)" % [lang, missing_cold])
 
 	fire.fuel = 30.0
 	voice.reset("need_firewood")
@@ -45,6 +47,8 @@ func run() -> void:
 	var shown: float = subs.lane_duration("speech")
 	_check(absf(shown - clip_len) < 0.3 and subs.lane_text("speech") == voice.current["variant"]["text"],
 		"its subtitle lasts as long as the clip (clip %.2f s, subtitle %.2f s)" % [clip_len, shown])
+	_check(voice._player.stream.resource_path.begins_with("res://vo/da/") and voice._player_cold.stream.resource_path
+		.begins_with("res://vo/da/cold/"), "in Danish he speaks the Danish takes, under the English subtitle")
 	_check(voice._player.playing and voice._player.bus == "Voice", "Eske speaks on his own bus")
 	_check(not voice.say("need_firewood"), "the same line will not come again within its cooldown")
 	fire.add_fuel(60.0, "driftwood")
@@ -86,6 +90,17 @@ func run() -> void:
 	await _wait(0.3)
 	var said_now: String = voice.current.get("variant", {}).get("text", "")
 	_check(said_now != "" and said_now != said_before, "the next time, other words: \"%s\" then \"%s\"" % [said_before, said_now])
+
+	voice.clear()
+	await _wait(0.3)
+	voice.language = "en"
+	voice.reset("wake_bay")
+	voice.say("wake_bay")
+	await _wait(0.4)
+	var english: String = voice._player.stream.resource_path
+	_check(english == "res://vo/wake_bay.wav" and subs.lane_text("speech") == "The bay is empty.",
+		"switched to English, he speaks the English take (%s)" % english)
+	voice.language = "da"
 
 	# --- Subtitles ---------------------------------------------------------------------------
 	voice.caption("cap_ice_cry")

@@ -11,6 +11,7 @@ const KEY := Color(0.62, 0.65, 0.7)
 var main
 var subtitles
 var quality := 1
+var language := "da"  # the language Eske and the men speak: "da" or "en"
 
 var _post: ColorRect
 var _frost: ColorRect
@@ -191,7 +192,7 @@ func _build_menu(font: Font) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	_menu.add_child(box)
-	for id in ["resume", "subtitles", "size", "band", "quality", "quit"]:
+	for id in ["resume", "language", "subtitles", "size", "band", "quality", "quit"]:
 		var b := Button.new()
 		b.flat = true
 		b.add_theme_font_override("font", font)
@@ -208,6 +209,7 @@ func _build_menu(font: Font) -> void:
 
 func _menu_text() -> void:
 	_menu_buttons["resume"].text = "Return to the cold"
+	_menu_buttons["language"].text = "Voice: %s" % ("Danish" if language == "da" else "English")
 	_menu_buttons["subtitles"].text = "Subtitles: %s" % ("On" if subtitles.enabled else "Off")
 	_menu_buttons["size"].text = "Subtitle size: %s" % SubtitlesScript.SIZE_NAMES[subtitles.size_index]
 	_menu_buttons["band"].text = "Subtitle background: %d%%" % int(SubtitlesScript.BANDS[subtitles.band_index] * 100.0)
@@ -241,6 +243,9 @@ func _on_menu(id: String) -> void:
 		"resume":
 			open_menu(false)
 			return
+		"language":
+			language = "en" if language == "da" else "da"
+			main.voice.language = language
 		"subtitles":
 			subtitles.enabled = not subtitles.enabled
 		"size":
@@ -265,6 +270,7 @@ func _load_settings() -> void:
 		subtitles.size_index = cfg.get_value("subtitles", "size", 1)
 		subtitles.band_index = cfg.get_value("subtitles", "band", 2)
 		quality = cfg.get_value("video", "quality", 1)
+		language = cfg.get_value("voice", "language", "da")
 	subtitles.apply_settings()
 
 
@@ -274,4 +280,5 @@ func _save_settings() -> void:
 	cfg.set_value("subtitles", "size", subtitles.size_index)
 	cfg.set_value("subtitles", "band", subtitles.band_index)
 	cfg.set_value("video", "quality", quality)
+	cfg.set_value("voice", "language", language)
 	cfg.save(SETTINGS_PATH)

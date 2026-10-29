@@ -8,10 +8,17 @@ lines also gets a colder take in vo/cold/ (more breath, muffled, a shiver) that 
 as he freezes. The men calling in the dream are made distant: thinned, pushed far out over the
 water, with echoes off the shore.
 
-    python3 tools/make_vo.py                      # every line, then VO_SCRIPT.md
+Every line is made twice: in English into vo/ and vo/cold/, and in Danish into vo/da/ and
+vo/da/cold/. The player picks the language in the settings. For Danish it uses Magnus, a man's
+voice, if it is installed (System Settings > Accessibility > Spoken Content > System Voice >
+Manage Voices); otherwise Sara, a woman's voice, set down to a man's pitch with `say`'s [[pbas]]
+command, which keeps her voice natural where slowing the recording would not.
+
+    python3 tools/make_vo.py                      # every line in both languages, then VO_SCRIPT.md
+    python3 tools/make_vo.py --lang da            # only the Danish takes
     python3 tools/make_vo.py need_firewood relit  # only these ids
     python3 tools/make_vo.py --script             # only rewrite VO_SCRIPT.md
-    python3 tools/make_vo.py --recordings DIR     # treat real takes instead of `say` (see VO_SCRIPT.md)
+    python3 tools/make_vo.py --recordings DIR --lang da  # treat real takes instead of `say` (see VO_SCRIPT.md)
 
 Needs macOS (`say`, `afconvert`) and Python 3. Writes 16-bit mono 44.1 kHz WAVs.
 """
@@ -28,8 +35,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LINES = ROOT / "data" / "lines.json"
-OUT = ROOT / "vo"
-COLD = OUT / "cold"
+OUT = {"en": ROOT / "vo", "da": ROOT / "vo" / "da"}
 SR = 44100
 TAU = 2 * math.pi
 
@@ -37,6 +43,19 @@ ESKE_VOICE = "Daniel (English (UK))"
 ESKE_RATE = 135
 CREW_RATE = 150
 ESKE_STRETCH = 1.11  # slower and about 1.8 semitones lower
+
+DA_RATE = 140          # Sara goes no slower than about this
+SARA_ESKE_PITCH = 38   # [[pbas 38]]: about 120 Hz, 110 Hz after the stretch (she speaks at 193 Hz)
+SARA_STRETCH = 1.08    # a little slower and lower, which also darkens her a little
+
+
+def danish_voice():
+    """Magnus (a man) if he is installed, the best quality first; else Sara (a woman)."""
+    listing = subprocess.run(["say", "-v", "?"], capture_output=True, text=True).stdout
+    names = [row.split(" da_DK")[0].strip() for row in listing.splitlines() if " da_DK" in row]
+    magnus = sorted((n for n in names if n.startswith("Magnus")),
+                    key=lambda n: ("Premium" not in n, "Enhanced" not in n))
+    return magnus[0] if magnus else "Sara"
 
 
 # --- Reading and writing ---------------------------------------------------
@@ -265,13 +284,37 @@ def treat_far(speech, loud):
     return reverb(mix(*echoes), 0.34)
 
 
+# --- Placeholder speech --------------------------------------------------------------
+
+def placeholder(line, v, lang, da_voice, tmp):
+    """Speak one variant with `say`, before any treatment."""
+    eske = line["kind"] == "speech"
+    if lang == "en":
+        text = v.get("tts", v["text"])
+        if eske:
+            return stretch(trim(speak(text, ESKE_VOICE, ESKE_RATE, tmp)), ESKE_STRETCH)
+        return stretch(trim(speak(text, v.get("voice", "Reed (English (UK))"), CREW_RATE, tmp)), 1.04)
+    text = v.get("da_tts", v["da"])
+    pitch = SARA_ESKE_PITCH if eske else v.get("da_pitch", 40)
+    if da_voice == "Sara":
+        return stretch(trim(speak(f"[[pbas {pitch}]] {text}", da_voice, DA_RATE if eske else CREW_RATE, tmp)),
+                       SARA_STRETCH if eske else 1.04)
+    # Magnus is a man already: Eske as Daniel is, the men told apart by how far they are slowed.
+    if eske:
+        return stretch(trim(speak(text, da_voice, ESKE_RATE, tmp)), ESKE_STRETCH)
+    return stretch(trim(speak(text, da_voice, CREW_RATE, tmp)), 1.04 * 2 ** ((39 - pitch) / 24))
+
+
 # --- The script for real recordings ------------------------------------------------
 
 SCRIPT_HEAD = """# Qivittoq: voice-over script, Night 1
 
-Every spoken line in Night 1. The game plays whatever WAV file sits in `vo/` under the name in the
-**File** column, so a real recording replaces a placeholder just by being saved over it. Subtitles
-take their timing from the length of each file.
+Every spoken line in Night 1, in Danish and in English. Eske and the men speak either language,
+chosen in the settings (Esc); Danish is the default. The subtitles show the English line in both.
+
+The game plays whatever WAV file sits under the name in the **File** column: in `vo/da/` for
+Danish and in `vo/` for English. A real recording replaces a placeholder just by being saved over
+it. Subtitles take their timing from the length of each file.
 
 This file is written by `python3 tools/make_vo.py --script` from `data/lines.json`. Change lines
 there, not here.
@@ -281,15 +324,17 @@ there, not here.
 - **Eske** is a Danish sailor in his thirties: tired, hoarse, cold, with his breath audible. He
   speaks quietly to himself, never to an audience. Never theatrical. Leave a breath before and after
   each line, and trim no closer than about 0.2 s.
-- **Language:** English for now. Whether Eske should speak Danish with English subtitles is still
-  open in the design.
+- **The Danish lines** are plain modern Danish, translated from the English. Have a native speaker
+  check them before recording; an actor may want them older or rougher (it is 1424), as long as
+  each line still means what its English subtitle says.
 - **Format:** WAV, mono, 44.1 kHz, 16-bit. Record dry and close; the game adds the open-air reverb
   outside and keeps the voice dry in the tent.
-- **The cold:** the game muffles Eske as he freezes, and crossfades to a second take in `vo/cold/`
-  with the same file name if there is one. Record that take breathier, with teeth close to
-  chattering, or make it from the normal take with `python3 tools/make_vo.py --recordings DIR`.
+- **The cold:** the game muffles Eske as he freezes, and crossfades to a second take in
+  `vo/da/cold/` (or `vo/cold/`) with the same file name if there is one. Record that take breathier,
+  with teeth close to chattering, or make it from the normal take with
+  `python3 tools/make_vo.py --recordings DIR --lang da`.
 - **The men in the dream** shout from a boat far out on the water. Record them close and loud;
-  `make_vo.py --recordings` pushes them out over the water. Danish crew, English words for now.
+  `make_vo.py --recordings` pushes them out over the water.
 - **Variants:** lines with several takes (need_firewood_1, _2, _3) are chosen in turn so the same
   words never come twice in a row.
 
@@ -302,18 +347,20 @@ def write_script(table):
     crew = [l for l in table if l["kind"] == "voice"]
     for title, lines in (("Eske", eske), ("The men in the dream", crew)):
         out.append(f"## {title}\n\n")
-        out.append("| Id | File | Line | When it plays | Delivery |\n| --- | --- | --- | --- | --- |\n")
+        out.append("| Id | File | Danish | English (the subtitle) | When it plays | Delivery |\n"
+                   "| --- | --- | --- | --- | --- | --- |\n")
         for line in lines:
             for v in line["variants"]:
                 who = f" ({line['speaker']})" if line.get("speaker") else ""
-                out.append(f"| `{line['id']}` | `{v['file']}` | “{v['text']}”{who} | {line.get('when', '')} | "
-                           f"{line.get('note', '')} |\n")
+                out.append(f"| `{line['id']}` | `{v['file']}` | “{v['da']}” | “{v['text']}”{who} | "
+                           f"{line.get('when', '')} | {line.get('note', '')} |\n")
         out.append("\n")
     carved = [l for l in table if l["kind"] == "carved"]
     if carved:
         out.append("## Not spoken\n\n")
         for line in carved:
-            out.append(f"- `{line['id']}`: “{line['variants'][0]['text']}” {line.get('when', '')}\n")
+            v = line["variants"][0]
+            out.append(f"- `{line['id']}`: “{v['text']}” (“{v.get('da', '')}”) {line.get('when', '')}\n")
         out.append("\n")
     (ROOT / "VO_SCRIPT.md").write_text("".join(out), encoding="utf-8")
     print("wrote VO_SCRIPT.md")
@@ -325,8 +372,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("ids", nargs="*", help="only make these line ids")
     ap.add_argument("--script", action="store_true", help="only rewrite VO_SCRIPT.md")
+    ap.add_argument("--lang", choices=("both", "da", "en"), default="both", help="which language to make")
     ap.add_argument("--recordings", metavar="DIR", help="treat real takes named like the files in vo/")
     args = ap.parse_args()
+    if args.recordings and args.lang == "both":
+        ap.error("say which language the recordings are in: --lang da or --lang en")
 
     table = json.loads(LINES.read_text(encoding="utf-8"))["lines"]
     if args.script:
@@ -335,31 +385,34 @@ def main():
     voiced = [l for l in table if l["kind"] in ("speech", "voice")]
     if args.ids:
         voiced = [l for l in voiced if l["id"] in args.ids]
+    langs = ("da", "en") if args.lang == "both" else (args.lang,)
+    da_voice = danish_voice()
+    if "da" in langs and not args.recordings:
+        print(f"Danish voice: {da_voice}")
     with tempfile.TemporaryDirectory() as tmp:
-        for line in voiced:
-            for k, v in enumerate(line["variants"]):
-                rng = random.Random(f"{line['id']}-{k}")
-                if args.recordings:
-                    src = Path(args.recordings) / v["file"]
-                    if not src.exists():
-                        print(f"  skip {v['file']} (no recording)")
-                        continue
-                    speech = trim(read_wav(src))
-                elif line["kind"] == "speech":
-                    speech = trim(speak(v.get("tts", v["text"]), ESKE_VOICE, ESKE_RATE, tmp))
-                    speech = stretch(speech, ESKE_STRETCH)
-                else:
-                    speech = trim(speak(v.get("tts", v["text"]), v.get("voice", "Reed (English (UK))"), CREW_RATE, tmp))
-                    speech = stretch(speech, 1.04)
-                if line["kind"] == "speech":
-                    # A real take goes in as it is; only the placeholder needs roughening.
-                    warm = speech if args.recordings else treat_eske(speech, rng, False)
-                    write_wav(OUT / v["file"], warm, -3.0)
-                    write_wav(COLD / v["file"], treat_eske(speech, random.Random(f"{line['id']}-{k}-cold"), True), -4.5)
-                else:
-                    loud = v["text"].isupper() or "!" in v["text"]
-                    write_wav(OUT / v["file"], treat_far(speech, loud), -2.0 if loud else -6.0)
-                print(f"  {v['file']}")
+        for lang in langs:
+            out = OUT[lang]
+            for line in voiced:
+                for k, v in enumerate(line["variants"]):
+                    rng = random.Random(f"{line['id']}-{k}")
+                    if args.recordings:
+                        src = Path(args.recordings) / v["file"]
+                        if not src.exists():
+                            print(f"  skip {v['file']} (no recording)")
+                            continue
+                        speech = trim(read_wav(src))
+                    else:
+                        speech = placeholder(line, v, lang, da_voice, tmp)
+                    if line["kind"] == "speech":
+                        # A real take goes in as it is; only the placeholder needs roughening.
+                        warm = speech if args.recordings else treat_eske(speech, rng, False)
+                        write_wav(out / v["file"], warm, -3.0)
+                        write_wav(out / "cold" / v["file"],
+                                  treat_eske(speech, random.Random(f"{line['id']}-{k}-cold"), True), -4.5)
+                    else:
+                        loud = v["text"].isupper() or "!" in v["text"]
+                        write_wav(out / v["file"], treat_far(speech, loud), -2.0 if loud else -6.0)
+                    print(f"  {out.relative_to(ROOT)}/{v['file']}")
     if not args.ids:
         write_script(table)
 
