@@ -4,3 +4,5 @@
 .DS_Store
 # Archives that duplicate the assets
 *.zip
+# Exported games (made by Godot from export_presets.cfg)
+builds/
